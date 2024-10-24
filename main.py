@@ -1,16 +1,67 @@
-# This is a sample Python script.
+import math
+import random
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+import numpy as np
+import json
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+def pretty_print_dict(d):
+    print(json.dumps(d, indent=4, sort_keys=True))
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+def find_next_dist(target_word, sentences):
+    prob_dist = dict()
+    word_count = 0
+    for sentence in sentences:
+        if sentence.__contains__(target_word):
+            for i in range(sentence.__len__()):
+                if sentence[i] == target_word:
+                    num = prob_dist.get(sentence[i + 1], 0)
+                    prob_dist.update({sentence[i + 1]: num + 1})
+                    word_count += 1
+
+    for key in prob_dist.keys():
+        value = prob_dist.get(key)
+        prob_dist.update({key: value / word_count})
+
+    return prob_dist
+
+
+DATA_PATH = "data/sentences.txt"
+input_file = open(DATA_PATH, "r")
+org_input_list = [sentence.split() for sentence in input_file.readlines()]
+
+
+def generate_next(word, input_list):
+    prob_dist = find_next_dist(word, input_list)
+    words = list(prob_dist.keys())
+    probabilities = list(prob_dist.values())
+    next_word = random.choices(words, probabilities)[0]
+    return next_word
+
+
+def generate_new_sentence(input_list):
+    new_sentence = "<|start|>"
+    word = "<|start|>"
+    while word != "<|end|>":
+        word = generate_next(word, input_list)
+        new_sentence += " " + word
+
+    return new_sentence
+
+
+def calc_sentence_prob(sentence, input_list):
+    sentence_list = sentence.split(" ")
+    probability = 1
+    for i in range(sentence_list.__len__() - 1):
+        prob_dist = find_next_dist(sentence_list[i], input_list)
+        probability *= prob_dist.get(sentence_list[i+1])
+
+    return math.log(probability)
+
+
+for i in range(10):
+    sentence = generate_new_sentence(org_input_list)
+    print(sentence + " " + str(calc_sentence_prob(sentence, org_input_list)))
+
+
