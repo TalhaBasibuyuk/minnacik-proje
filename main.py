@@ -27,11 +27,6 @@ def find_next_dist(target_word, sentences):
     return prob_dist
 
 
-DATA_PATH = "data/sentences.txt"
-input_file = open(DATA_PATH, "r")
-org_input_list = [sentence.split() for sentence in input_file.readlines()]
-
-
 def generate_next(word, input_list):
     prob_dist = find_next_dist(word, input_list)
     words = list(prob_dist.keys())
@@ -59,6 +54,10 @@ def calc_sentence_prob(sentence, input_list):
 
     return math.log(probability)
 
+
+DATA_PATH = "data/sentences.txt"
+input_file = open(DATA_PATH, "r")
+org_input_list = [sentence.split() for sentence in input_file.readlines()]
 
 for i in range(10):
     sentence = generate_new_sentence(org_input_list)
