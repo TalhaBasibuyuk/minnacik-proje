@@ -14,34 +14,34 @@ nondetected_data = data[data["Detection"] == "No Detect"].drop("Detection", axis
 #print(detected_data)
 
 # calculate mean and variance for each feature and category
-d_m = dict()
-d_v = dict()
+detected_means = dict()
+detected_vars = dict()
 for feature in detected_data.columns:  # we exclude the "person" column
 
-    d_m[feature] = detected_data[feature].mean()
-    d_v[feature] = detected_data[feature].var()
+    detected_means[feature] = detected_data[feature].mean()
+    detected_vars[feature] = detected_data[feature].var()
 
-nd_m = dict()
-nd_v = dict()
+nondetected_means = dict()
+nondetected_vars = dict()
 for feature in detected_data.columns:  # we exclude the "person" column
 
-    nd_m[feature] = nondetected_data[feature].mean()
-    nd_v[feature] = nondetected_data[feature].var()
+    nondetected_means[feature] = nondetected_data[feature].mean()
+    nondetected_vars[feature] = nondetected_data[feature].var()
 
-all_m = dict()
-all_v = dict()
+all_means = dict()
+all_vars = dict()
 
 for feature in data.drop("Detection", axis=1).columns:  # we exclude the "person" column
 
-    all_m[feature] = data[feature].mean()
-    all_v[feature] = data[feature].var()
+    all_means[feature] = data[feature].mean()
+    all_vars[feature] = data[feature].var()
 """
-print(d_m["Distance"], d_v["Distance"])
-print(nd_m["Distance"], nd_v["Distance"])
-print(all_m["Distance"], all_v["Distance"])
-print(d_m["Amplitude"], d_v["Amplitude"])
-print(nd_m["Amplitude"], nd_v["Amplitude"])
-print(all_m["Amplitude"], all_v["Amplitude"])
+print(detected_means["Distance"], detected_vars["Distance"])
+print(nondetected_means["Distance"], nondetected_vars["Distance"])
+print(all_means["Distance"], all_vars["Distance"])
+print(detected_means["Amplitude"], detected_vars["Amplitude"])
+print(nondetected_means["Amplitude"], nondetected_vars["Amplitude"])
+print(all_means["Amplitude"], all_vars["Amplitude"])
 """
 
 
@@ -51,80 +51,80 @@ def prob_for_detected_ad(a, d):
     step_size = 0.000002
     wid = 0.001
 
-    det_a = 0
+    detected_amp = 0
     for x in np.arange(a-wid, a+wid, step_size):
-        det_a += gaussian(x, d_m["Amplitude"], d_v["Amplitude"]) * step_size
-    det_d = 0
+        detected_amp += gaussian(x, detected_means["Amplitude"], detected_vars["Amplitude"]) * step_size
+    detected_dist = 0
     for x in np.arange(d-wid, d+wid, step_size):
-        det_d += gaussian(x, d_m["Distance"], d_v["Distance"]) * step_size
-    det_prob = det_a * det_d
+        detected_dist += gaussian(x, detected_means["Distance"], detected_vars["Distance"]) * step_size
+    detected_prob = detected_amp * detected_dist
 
-    p_detection = len(detected_data)/len(data)
-    ndet_a = 0
+    prob_detection = len(detected_data)/len(data)
+    nondetected_amp = 0
     for x in np.arange(a - wid, a + wid, step_size):
-        ndet_a += gaussian(x, nd_m["Amplitude"], nd_v["Amplitude"]) * step_size
-    ndet_d = 0
+        nondetected_amp += gaussian(x, nondetected_means["Amplitude"], nondetected_vars["Amplitude"]) * step_size
+    nondetected_dist = 0
     for x in np.arange(d - wid, d + wid, step_size):
-        ndet_d += gaussian(x, nd_m["Distance"], nd_v["Distance"]) * step_size
-    ndet_prob = ndet_a * ndet_d
-    all_prob = det_prob*p_detection + ndet_prob*(1-p_detection)
+        nondetected_dist += gaussian(x, nondetected_means["Distance"], nondetected_vars["Distance"]) * step_size
+    nondetected_prob = nondetected_amp * nondetected_dist
+    all_prob = detected_prob*prob_detection + nondetected_prob*(1-prob_detection)
 
-    return det_prob * p_detection / all_prob
+    return detected_prob * prob_detection / all_prob
 
 
 def prob_for_nondetected_ad(a, d):
     step_size = 0.000002
     wid = 0.001
 
-    ndet_a = 0
+    nondetected_amp = 0
     for x in np.arange(a-wid, a+wid, step_size):
-        ndet_a += gaussian(x, nd_m["Amplitude"], nd_v["Amplitude"]) * step_size
-    ndet_d = 0
+        nondetected_amp += gaussian(x, nondetected_means["Amplitude"], nondetected_vars["Amplitude"]) * step_size
+    nondetected_dist = 0
     for x in np.arange(d-wid, d+wid, step_size):
-        ndet_d += gaussian(x, nd_m["Distance"], nd_v["Distance"]) * step_size
-    ndet_prob = ndet_a * ndet_d
+        nondetected_dist += gaussian(x, nondetected_means["Distance"], nondetected_vars["Distance"]) * step_size
+    nondetected_prob = nondetected_amp * nondetected_dist
 
 
     p_nondetection = len(nondetected_data)/len(data)
 
-    det_a = 0
+    detected_amp = 0
     for x in np.arange(a - wid, a + wid, step_size):
-        det_a += gaussian(x, d_m["Amplitude"], d_v["Amplitude"]) * step_size
-    det_d = 0
+        detected_amp += gaussian(x, detected_means["Amplitude"], detected_vars["Amplitude"]) * step_size
+    detected_dist = 0
     for x in np.arange(d - wid, d + wid, step_size):
-        det_d += gaussian(x, d_m["Distance"], d_v["Distance"]) * step_size
-    det_prob = det_a * det_d
-    all_prob = det_prob * p_nondetection + ndet_prob * (1 - p_nondetection)
+        detected_dist += gaussian(x, detected_means["Distance"], detected_vars["Distance"]) * step_size
+    detected_prob = detected_amp * detected_dist
+    all_prob = detected_prob * p_nondetection + nondetected_prob * (1 - p_nondetection)
 
-    return ndet_prob * p_nondetection / all_prob
+    return nondetected_prob * p_nondetection / all_prob
 
 extra = pd.read_csv("res/detection_data.csv")
 
 
-s_c = 0
-f_c = 0
+success_count = 0
+failure_count = 0
 for index, dataling in extra.iterrows():
 
     det = prob_for_detected_ad(dataling[1], dataling[0])
     nondet = prob_for_nondetected_ad(dataling[1], dataling[0])
     if det > nondet:
-        if dataling[2] == "Detect": s_c += 1
-        else: f_c += 1
+        if dataling[2] == "Detect": success_count += 1
+        else: failure_count += 1
     else:
         if dataling[2] == "No Detect":
-            s_c += 1
+            success_count += 1
         else:
-            f_c += 1
-print("Success: ", s_c, " Failure: ", f_c)
+            failure_count += 1
+print("Success: ", success_count, " Failure: ", failure_count)
 
 
 """
 def height_density(height):
-    return gaussian(height, all_m["Distance"], all_v["Distance"])
+    return gaussian(height, all_means["Distance"], all_vars["Distance"])
 
 step_size = 0.01
 width = 50
-mean = d_m["Distance"]
+mean = detected_means["Distance"]
 x_values = np.arange(mean-width, mean+width, step_size)
 y_values = height_density(x_values)*step_size
 plt.figure(figsize=(8, 6))
