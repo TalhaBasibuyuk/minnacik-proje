@@ -61,7 +61,7 @@ def test(std):
     g_of_samples2 = np.array(list2)
     test_mean = np.mean(g_of_samples2)
 
-    z = (test_mean - truth_mean) / (std - np.sqrt(50))
+    z = (test_mean - truth_mean) / (std / np.sqrt(50))
     print("Truth mean: " + str(truth_mean))
     print("Test mean: " + str(test_mean))
     print("z_value: " + str(z))
