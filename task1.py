@@ -42,15 +42,41 @@ def generate_new_sentence(input_list):
 
     return new_sentence
 
-# Calculates the probability of a given sentence and returns the logarithm of the sentence for a better.
+# Calculates the probability of a given sentence
+# Returns 0 if sentence is impossible, otherwise returns the logarithm of the probability
 def calc_sentence_prob(sentence, input_list):
     sentence_list = sentence.split(" ")
+    if sentence_list[0] != "<|start|>" or sentence_list[-1] != "<|end|>":
+        return None
     probability = 1
     for i in range(len(sentence_list) - 1):
         prob_dist = find_next_dist(sentence_list[i], input_list)
-        probability *= prob_dist.get(sentence_list[i+1])
-
+        probability *= prob_dist.get(sentence_list[i+1], 0)
+    if probability == 0:
+       return None
     return math.log(probability)
+
+
+def compare_generated_and_actual_sentence(written_sentence, generated_sentence, input_list):
+    generated_sentence_prob = calc_sentence_prob(generated_sentence, input_list)
+    written_sentence_prob = calc_sentence_prob(written_sentence, input_list)
+
+    print("Logarithm of the probability of generated sentence is: ", generated_sentence_prob)
+
+    if written_sentence_prob is None:
+        print("Written sentence is not probable.")
+        return
+    print("Logarithm of the probability of written sentence is: ", written_sentence_prob)
+
+
+    if calc_sentence_prob(written_sentence, input_list) > calc_sentence_prob(generated_sentence, input_list):
+        print("Written sentence is more probable than the generated sentence.")
+    elif calc_sentence_prob(written_sentence, input_list) < calc_sentence_prob(generated_sentence, input_list):
+        print("Generated sentence is more probable than the written sentence.")
+    else:
+        print("Generated sentence and written sentence are equally likely.")
+
+
 
 # Read the sentences.txt file and process the input
 DATA_PATH = "data/sentences.txt"
@@ -58,8 +84,15 @@ input_file = open(DATA_PATH, "r")
 org_input_list = [sentence.split() for sentence in input_file.readlines()]
 
 # generate 5 sentences
+print("***************Example Sentences***************")
 for i in range(5):
     sentence = generate_new_sentence(org_input_list)
     print(sentence)
 
-
+print()
+print("***************Comparison of the written and the  generated sentence***************")
+generated_sentence = generate_new_sentence(org_input_list)
+written_sentence = "<|start|> I enjoy hiking <|end|>"
+print("Generated sentence: ", generated_sentence)
+print("Written sentence: ", written_sentence)
+compare_generated_and_actual_sentence(written_sentence , generated_sentence , org_input_list)
