@@ -1,6 +1,6 @@
 import numpy as np
 
-
+# Representation of multivariate normal distribution
 mean_vector = np.array([20, 0.3, 0.8])
 covar_matrix = np.array([
     [4, 0.5, 0.2],
@@ -12,7 +12,7 @@ covar_matrix = np.array([
 def g(x):
     return 0.1 * x[0]**2 + 12.5 * x[1]**2 - 7.5 * x[2]**2
 
-
+# Calculate population variance
 def population_variance(matrix):
     result = 0
     result += 0.1**2 * matrix[0][0]**2
@@ -23,7 +23,7 @@ def population_variance(matrix):
     result += 187.5 * matrix[1][2]**2
     return result
 
-
+# Generate monte carlo samples and calculate confidence interval
 def monte_carlo_sampling(sample_count, pop_var):
     samples = np.random.multivariate_normal(mean_vector, covar_matrix, sample_count)
     list = []
@@ -46,7 +46,7 @@ for n in [50, 100, 1000, 10000]:
 
 print("Part 3:")
 
-
+# Hypothesis testing
 def test(std):
     truth_samples = np.random.multivariate_normal(mean_vector, covar_matrix, 10000)
     test_samples = np.random.multivariate_normal(mean_vector, covar_matrix, 50)
