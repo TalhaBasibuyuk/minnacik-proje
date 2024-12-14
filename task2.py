@@ -1,29 +1,31 @@
-import numpy as np  # for mathematical operations
-import pandas as pd  # to manipulate dataset
-import matplotlib.pyplot as plt  # to plot out data
+import numpy as np  
+import pandas as pd 
 
 
+# model the gaussian distribution
 def gaussian(x, mean, var):
     return (np.power(np.e, -np.power(x - mean, 2) / (2 * var))) / np.sqrt(2 * np.pi*var)
 
+# read the datas from detection_data.csv
+data = pd.read_csv("detection_data.csv")
 
-data = pd.read_csv("res/detection_data.csv")
-#print(data)
+# Classify the data based detection and no detection
 detected_data = data[data["Detection"] == "Detect"].drop("Detection", axis=1)
 nondetected_data = data[data["Detection"] == "No Detect"].drop("Detection", axis=1)
-#print(detected_data)
 
-# calculate mean and variance for each feature and category
+
+# Calculate the mean and variance of distance and amplitude for detected cases
 detected_means = dict()
 detected_vars = dict()
-for feature in detected_data.columns:  # we exclude the "person" column
+for feature in detected_data.columns:  
 
     detected_means[feature] = detected_data[feature].mean()
     detected_vars[feature] = detected_data[feature].var()
 
+# Calculate the mean and variance of distance and amplitude for nondetected cases
 nondetected_means = dict()
 nondetected_vars = dict()
-for feature in detected_data.columns:  # we exclude the "person" column
+for feature in detected_data.columns: 
 
     nondetected_means[feature] = nondetected_data[feature].mean()
     nondetected_vars[feature] = nondetected_data[feature].var()
@@ -31,82 +33,100 @@ for feature in detected_data.columns:  # we exclude the "person" column
 all_means = dict()
 all_vars = dict()
 
-for feature in data.drop("Detection", axis=1).columns:  # we exclude the "person" column
+for feature in data.drop("Detection", axis=1).columns:  
 
     all_means[feature] = data[feature].mean()
     all_vars[feature] = data[feature].var()
-"""
-print(detected_means["Distance"], detected_vars["Distance"])
-print(nondetected_means["Distance"], nondetected_vars["Distance"])
-print(all_means["Distance"], all_vars["Distance"])
-print(detected_means["Amplitude"], detected_vars["Amplitude"])
-print(nondetected_means["Amplitude"], nondetected_vars["Amplitude"])
-print(all_means["Amplitude"], all_vars["Amplitude"])
-"""
 
-
-
-def prob_for_detected_ad(a, d):
+# Calculates the probability of detection given amplitude,distance
+def prob_detect_given_a_d(amplitude, distance):
 
     step_size = 0.000002
-    wid = 0.001
+    width = 0.001
+    
+    # We found the probabilites for amplitude and distance
+    # by integrating the prob dist over a very short interval(width) around the given points
+    
+    # P(a|Detect)
+    prob_a_given_detect = 0
+    for x in np.arange(amplitude-width, amplitude+width, step_size):
+        prob_a_given_detect += gaussian(x, detected_means["Amplitude"], detected_vars["Amplitude"]) * step_size
 
-    detected_amp = 0
-    for x in np.arange(a-wid, a+wid, step_size):
-        detected_amp += gaussian(x, detected_means["Amplitude"], detected_vars["Amplitude"]) * step_size
-    detected_dist = 0
-    for x in np.arange(d-wid, d+wid, step_size):
-        detected_dist += gaussian(x, detected_means["Distance"], detected_vars["Distance"]) * step_size
-    detected_prob = detected_amp * detected_dist
+    # P(d|Detect)
+    prob_d_given_detect = 0
+    for x in np.arange(distance-width, distance+width, step_size):
+        prob_d_given_detect += gaussian(x, detected_means["Distance"], detected_vars["Distance"]) * step_size
 
-    prob_detection = len(detected_data)/len(data)
-    nondetected_amp = 0
-    for x in np.arange(a - wid, a + wid, step_size):
-        nondetected_amp += gaussian(x, nondetected_means["Amplitude"], nondetected_vars["Amplitude"]) * step_size
-    nondetected_dist = 0
-    for x in np.arange(d - wid, d + wid, step_size):
-        nondetected_dist += gaussian(x, nondetected_means["Distance"], nondetected_vars["Distance"]) * step_size
-    nondetected_prob = nondetected_amp * nondetected_dist
-    all_prob = detected_prob*prob_detection + nondetected_prob*(1-prob_detection)
+    # P(a|Detect)*P(d|Detect)
+    prob_a_and_d_given_detect = prob_a_given_detect * prob_d_given_detect
+    
+    # P(Detect)
+    prob_detect = len(detected_data)/len(data)
 
-    return detected_prob * prob_detection / all_prob
+    # P(a|No Detect)
+    prob_a_given_nodetect = 0
+    for x in np.arange(amplitude - width, amplitude + width, step_size):
+        prob_a_given_nodetect += gaussian(x, nondetected_means["Amplitude"], nondetected_vars["Amplitude"]) * step_size
 
+    # P(d|No Detect)
+    prob_d_given_nodetect = 0
+    for x in np.arange(distance - width, distance + width, step_size):
+        prob_d_given_nodetect += gaussian(x, nondetected_means["Distance"], nondetected_vars["Distance"]) * step_size
+        
+    prob_a_and_d_given_nodetect = prob_a_given_nodetect * prob_d_given_nodetect
+    all_prob = prob_a_and_d_given_detect*prob_detect + prob_a_and_d_given_nodetect*(1-prob_detect)
 
-def prob_for_nondetected_ad(a, d):
+    return prob_a_and_d_given_detect * prob_detect / all_prob
+
+# Calculates the probability of no detection given amplitude,distance
+def prob_nodetect_given_a_d(amplitude, distance):
     step_size = 0.000002
-    wid = 0.001
+    width = 0.001
 
-    nondetected_amp = 0
-    for x in np.arange(a-wid, a+wid, step_size):
-        nondetected_amp += gaussian(x, nondetected_means["Amplitude"], nondetected_vars["Amplitude"]) * step_size
-    nondetected_dist = 0
-    for x in np.arange(d-wid, d+wid, step_size):
-        nondetected_dist += gaussian(x, nondetected_means["Distance"], nondetected_vars["Distance"]) * step_size
-    nondetected_prob = nondetected_amp * nondetected_dist
+    # We found the probabilites for amplitude and distance
+    # by integrating the prob dist over a very short interval(width) around the given points
 
+    # P(a|No Detect)
+    prob_a_given_nodetect = 0
+    for x in np.arange(amplitude-width, amplitude+width, step_size):
+        prob_a_given_nodetect += gaussian(x, nondetected_means["Amplitude"], nondetected_vars["Amplitude"]) * step_size
+    
+    # P(d|No Detect)   
+    prob_d_given_nodetect = 0
+    for x in np.arange(distance-width, distance+width, step_size):
+        prob_d_given_nodetect += gaussian(x, nondetected_means["Distance"], nondetected_vars["Distance"]) * step_size
 
-    p_nondetection = len(nondetected_data)/len(data)
+    # P(a|No Detect)*P(d|No Detect)
+    prob_a_and_d_given_nodetect = prob_a_given_nodetect * prob_d_given_nodetect
+    
+    # P(No Detect)
+    prob_nodetect = len(nondetected_data)/len(data)
 
-    detected_amp = 0
-    for x in np.arange(a - wid, a + wid, step_size):
-        detected_amp += gaussian(x, detected_means["Amplitude"], detected_vars["Amplitude"]) * step_size
-    detected_dist = 0
-    for x in np.arange(d - wid, d + wid, step_size):
-        detected_dist += gaussian(x, detected_means["Distance"], detected_vars["Distance"]) * step_size
-    detected_prob = detected_amp * detected_dist
-    all_prob = detected_prob * p_nondetection + nondetected_prob * (1 - p_nondetection)
+    # P(a|Detect)
+    prob_a_given_detect = 0
+    for x in np.arange(amplitude - width, amplitude + width, step_size):
+        prob_a_given_detect += gaussian(x, detected_means["Amplitude"], detected_vars["Amplitude"]) * step_size
 
-    return nondetected_prob * p_nondetection / all_prob
+    # P(d|Detect)
+    prob_d_given_detect = 0
+    for x in np.arange(distance - width, distance + width, step_size):
+        prob_d_given_detect += gaussian(x, detected_means["Distance"], detected_vars["Distance"]) * step_size
 
-extra = pd.read_csv("res/detection_data.csv")
+    prob_a_and_d_given_detect = prob_a_given_detect * prob_d_given_detect
+    all_prob = prob_a_and_d_given_detect * prob_nodetect + prob_a_and_d_given_nodetect * (1 - prob_nodetect)
 
+    return prob_a_and_d_given_nodetect * prob_nodetect / all_prob
 
+# Read the data in extra data file
+extra = pd.read_csv("detection_data_extra.csv")
+
+# Print the number of success and failure counts for extra data 
 success_count = 0
 failure_count = 0
 for index, dataling in extra.iterrows():
 
-    det = prob_for_detected_ad(dataling[1], dataling[0])
-    nondet = prob_for_nondetected_ad(dataling[1], dataling[0])
+    det = prob_detect_given_a_d(dataling[1], dataling[0])
+    nondet = prob_nodetect_given_a_d(dataling[1], dataling[0])
     if det > nondet:
         if dataling[2] == "Detect": success_count += 1
         else: failure_count += 1
@@ -118,25 +138,4 @@ for index, dataling in extra.iterrows():
 print("Success: ", success_count, " Failure: ", failure_count)
 
 
-"""
-def height_density(height):
-    return gaussian(height, all_means["Distance"], all_vars["Distance"])
 
-step_size = 0.01
-width = 50
-mean = detected_means["Distance"]
-x_values = np.arange(mean-width, mean+width, step_size)
-y_values = height_density(x_values)*step_size
-plt.figure(figsize=(8, 6))
-plt.plot(x_values, y_values)
-plt.title("Distribution of Height")
-plt.xlabel("height")
-plt.ylabel("probability density")
-#plt.legend()
-plt.show()
-
-area = 0
-for x in x_values:
-    area+=height_density(x)*step_size
-print(area)
-"""
