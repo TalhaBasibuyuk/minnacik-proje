@@ -44,7 +44,7 @@ def prob_detect_given_a_d(amplitude, distance):
     step_size = 0.000002
     width = 0.001
     
-    # We found the probabilites for amplitude and distance
+    # We found the probabilities for amplitude and distance
     # by integrating the prob dist over a very short interval(width) around the given points
     
     # P(a|Detect)
@@ -83,7 +83,7 @@ def prob_nodetect_given_a_d(amplitude, distance):
     step_size = 0.000002
     width = 0.001
 
-    # We found the probabilites for amplitude and distance
+    # We found the probabilities for amplitude and distance
     # by integrating the prob dist over a very short interval(width) around the given points
 
     # P(a|No Detect)
@@ -117,25 +117,35 @@ def prob_nodetect_given_a_d(amplitude, distance):
 
     return prob_a_and_d_given_nodetect * prob_nodetect / all_prob
 
+# Print the success count of the csv data
+def print_success_failure(input_data):
+    success_count = 0
+    failure_count = 0
+    for index, dataling in input_data.iterrows():
+
+        det = prob_detect_given_a_d(dataling.iloc[1], dataling.iloc[0])
+        nondet = prob_nodetect_given_a_d(dataling.iloc[1], dataling.iloc[0])
+        if det > nondet:
+            if dataling.iloc[2] == "Detect":
+                success_count += 1
+            else:
+                failure_count += 1
+        else:
+            if dataling.iloc[2] == "No Detect":
+                success_count += 1
+            else:
+                failure_count += 1
+    print("Success: ", success_count, " Failure: ", failure_count)
+
+
 # Read the data in extra data file
 extra = pd.read_csv("detection_data_extra.csv")
 
-# Print the number of success and failure counts for extra data 
-success_count = 0
-failure_count = 0
-for index, dataling in extra.iterrows():
-
-    det = prob_detect_given_a_d(dataling[1], dataling[0])
-    nondet = prob_nodetect_given_a_d(dataling[1], dataling[0])
-    if det > nondet:
-        if dataling[2] == "Detect": success_count += 1
-        else: failure_count += 1
-    else:
-        if dataling[2] == "No Detect":
-            success_count += 1
-        else:
-            failure_count += 1
-print("Success: ", success_count, " Failure: ", failure_count)
+# Print the number of success and failure counts for extra data
+print("For detection_data.csv,", end=" ")
+print_success_failure(data)
+print("For detection_data_extra.csv,", end=" ")
+print_success_failure(extra)
 
 
 
